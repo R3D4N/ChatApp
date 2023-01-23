@@ -7,6 +7,7 @@ const fccTesting = require('./freeCodeCamp/fcctesting.js');
 const session = require('express-session');
 const passport = require('passport');
 const {ObjectID, ObjectId} = require('mongodb');
+const bcrypt = require('bcrypt');
 
 const app = express();
 
@@ -52,7 +53,7 @@ myDB(async client =>{
             console.log(`User ${username} attempted to log in.`);
             if (err) return done(err);
             if (!user) return done(null, false);
-            if (password !== user.password) return done(null, false);
+            if (!bcrypt.compareSync(password, user.password)) return done(null, false);
             return done(null, user);
         })
     }));
@@ -78,6 +79,31 @@ myDB(async client =>{
     app.route('/profile').get(ensureAuthenticated,(req, res)=>{
         res.render('profile', {username: req.user.username})
     });
+
+    app.route('/register').post((req, res, next)=>{
+        // encrypt the password to save it
+        const hash = bcrypt.hashSync(req.body.password, 12);
+        myDataBase.findOne({username: req.body.username}, (err, user)=>{
+            if (err) {
+                next(err);
+            }else if (user) {
+                res.redirect('/')
+            } else {
+                myDataBase.insertOne({
+                    username: req.body.username,
+                    password: hash
+                }, (err, doc)=>{
+                    if (err) {
+                        res.redirect('/')
+                    }else{
+                        next(null, doc.acknowledged);
+                    }
+                })
+            }
+        })
+    }, passport.authenticate('local', {failureRedirect: '/'}), (req, res, next)=>{
+        res.redirect('/profile');
+    })
 
     app.route('/logout').get((req, res)=>{
         req.logout((err)=>{

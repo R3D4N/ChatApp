@@ -12,7 +12,14 @@ function ensureAuthenticated(req, res, next) {
 module.exports = function (app, myDataBase) {
     // Routing
     app.route('/').get((req, res) => {
-        res.render('index', { title: 'Connected to Database', message: 'Please log in', showLogin: true, showRegistration: true });
+        res.render('index', { title: 'Connected to Database', message: 'Please log in', showLogin: true, showRegistration: true, showSocialAuth: true });
+    });
+
+    // call passport to authenticate github
+    app.route('/auth/github').get(passport.authenticate('github'));
+
+    app.route('/auth/github/callback').get(passport.authenticate('github', { failureRedirect: '/' }), (req, res) => {
+        res.redirect('/profile');
     });
 
     app.route('/login').post(passport.authenticate('local', { failureRedirect: '/' }), (req, res) => {
@@ -46,6 +53,10 @@ module.exports = function (app, myDataBase) {
         })
     }, passport.authenticate('local', { failureRedirect: '/' }), (req, res, next) => {
         res.redirect('/profile');
+    })
+
+    app.route('/chat').get(ensureAuthenticated,(req, res)=>{
+        res.render('chat', {user: req.user});
     })
 
     app.route('/logout').get((req, res) => {

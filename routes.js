@@ -19,7 +19,8 @@ module.exports = function (app, myDataBase) {
     app.route('/auth/github').get(passport.authenticate('github'));
 
     app.route('/auth/github/callback').get(passport.authenticate('github', { failureRedirect: '/' }), (req, res) => {
-        res.redirect('/profile');
+        req.session.user_id = req.user.id;
+        res.redirect('/chat');
     });
 
     app.route('/login').post(passport.authenticate('local', { failureRedirect: '/' }), (req, res) => {
